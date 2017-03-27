@@ -138,7 +138,7 @@ describe('util.parseSettings', function() {
   });
 });
 
-describe('mergeSettings', function() {
+describe('util.mergeSettings', function() {
   it('should merge settings correctly', function() {
     var src = {base: 'User',
       relations: {accessTokens: {model: 'accessToken', type: 'hasMany',
@@ -208,9 +208,62 @@ describe('mergeSettings', function() {
 
     should.deepEqual(dst.acls, expected.acls, 'Merged settings should match the expectation');
   });
+
+  it('should merge relations correctly', function() {
+    var src = {
+      relations: {
+        user: {
+          type: 'belongsTo',
+          idName: 'id',
+          polymorphic: {
+            idType: 'string',
+            foreignKey: 'userId',
+            discriminator: 'principalType',
+          },
+        },
+      },
+    };
+    var tgt = {
+      relations: {
+        user: {
+          type: 'belongsTo',
+          model: 'User',
+          foreignKey: 'userId',
+        },
+        someRelation: {
+          type: 'hasMany',
+          model: 'someModel',
+          foreignKey: 'modelId',
+        },
+      },
+    };
+
+    var dst = mergeSettings(tgt, src);
+
+    var expected = {
+      relations: {
+        user: {
+          type: 'belongsTo',
+          idName: 'id',
+          polymorphic: {
+            idType: 'string',
+            foreignKey: 'userId',
+            discriminator: 'principalType',
+          },
+        },
+        someRelation: {
+          type: 'hasMany',
+          model: 'someModel',
+          foreignKey: 'modelId',
+        },
+      },
+    };
+
+    should.deepEqual(dst.relations, expected.relations, 'Merged relations should match the expectation');
+  });
 });
 
-describe('sortObjectsByIds', function() {
+describe('util.sortObjectsByIds', function() {
   var items = [
     {id: 1, name: 'a'},
     {id: 2, name: 'b'},
