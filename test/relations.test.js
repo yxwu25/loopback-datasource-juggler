@@ -2026,7 +2026,103 @@ describe('relations', function() {
       db.automigrate(['Picture', 'Author', 'Reader'], done);
     });
 
-    it('can be declared', function(done) {
+    it('can be declared with model JSON definition ' +
+      ' when related model is already attached', function(done) {
+      var ds = new DataSource('memory');
+
+      // by defining Picture model before Author model we make sure Picture IS
+      // already attached when defining Author. This way, datasource.defineRelations
+      // WILL NOT use the async listener to call hasMany relation method
+      var Picture = ds.define('Picture', {name: String}, {relations: {
+        imageable: {type: 'belongsTo', polymorphic: true},
+      }});
+      var Author = ds.define('Author', {name: String}, {relations: {
+        pictures: {type: 'hasMany', model: 'Picture', polymorphic: 'imageable'},
+      }});
+
+      assert(Author.relations['pictures']);
+      assert.deepEqual(Author.relations['pictures'].toJSON(), {
+        name: 'pictures',
+        type: 'hasMany',
+        modelFrom: 'Author',
+        keyFrom: 'id',
+        modelTo: 'Picture',
+        keyTo: 'imageableId',
+        multiple: true,
+        polymorphic: {
+          as: 'imageable',
+          foreignKey: 'imageableId',
+          discriminator: 'imageableType',
+        },
+      });
+
+      assert(Picture.relations['imageable']);
+      assert.deepEqual(Picture.relations['imageable'].toJSON(), {
+        name: 'imageable',
+        type: 'belongsTo',
+        modelFrom: 'Picture',
+        keyFrom: 'imageableId',
+        modelTo: '<polymorphic>',
+        keyTo: 'id',
+        multiple: false,
+        polymorphic: {
+          as: 'imageable',
+          foreignKey: 'imageableId',
+          discriminator: 'imageableType',
+        },
+      });
+      done();
+    });
+
+    it('can be declared with model JSON definition ' +
+      ' when related model is not yet attached', function(done) {
+      var ds = new DataSource('memory');
+
+      // by defining Author model before Picture model we make sure Picture IS NOT
+      // already attached when defining Author. This way, datasource.defineRelations
+      // WILL use the async listener to call hasMany relation method
+      var Author = ds.define('Author', {name: String}, {relations: {
+        pictures: {type: 'hasMany', model: 'Picture', polymorphic: 'imageable'},
+      }});
+      var Picture = ds.define('Picture', {name: String}, {relations: {
+        imageable: {type: 'belongsTo', polymorphic: true},
+      }});
+
+      assert(Author.relations['pictures']);
+      assert.deepEqual(Author.relations['pictures'].toJSON(), {
+        name: 'pictures',
+        type: 'hasMany',
+        modelFrom: 'Author',
+        keyFrom: 'id',
+        modelTo: 'Picture',
+        keyTo: 'imageableId',
+        multiple: true,
+        polymorphic: {
+          as: 'imageable',
+          foreignKey: 'imageableId',
+          discriminator: 'imageableType',
+        },
+      });
+
+      assert(Picture.relations['imageable']);
+      assert.deepEqual(Picture.relations['imageable'].toJSON(), {
+        name: 'imageable',
+        type: 'belongsTo',
+        modelFrom: 'Picture',
+        keyFrom: 'imageableId',
+        modelTo: '<polymorphic>',
+        keyTo: 'id',
+        multiple: false,
+        polymorphic: {
+          as: 'imageable',
+          foreignKey: 'imageableId',
+          discriminator: 'imageableType',
+        },
+      });
+      done();
+    });
+
+    it('can be declared programmatically', function(done) {
       Author.hasMany(Picture, {polymorphic: 'imageable'});
       Reader.hasMany(Picture, {polymorphic: { // alt syntax
         as: 'imageable', foreignKey: 'imageableId',
